@@ -1,0 +1,82 @@
+﻿// Open the file that defines the type "expr" we shall use as AST
+%{
+open GCLSettings
+open TypesAST
+%}
+
+// Declare the tokens (terminal symbols)
+// NOTE: The actual formats of these tokens are defined in the lexer file as regular expressions
+%token <int> NUM
+%token <string> VAR
+
+// Arithmetic
+%token MULT DIV PLUS MINUS POW
+
+// Boolean
+%token TRUE FALSE
+
+// Commands
+%token SKIP
+
+// Guarded Commands
+%token EVAL
+
+// Misc
+%token LPAR RPAR EOF
+
+// Precedence and associativity of operators, from low to high.
+%left PLUS MINUS
+%left MULT DIV
+%right POW
+%left UNARY
+
+// We declare the initial non-terminal symbol
+%start start
+
+// We specify the return type of each of then non-terminal symbols
+%type <Command> start
+%type <Command> cExpression
+%type <GuardedCommand> gcExpression
+%type <AExpr> aExpression
+%type <BExpr> bExpression
+
+
+%%
+// Grammar productions
+
+start: cExpression EOF              { $1 }
+
+// Note that we need to insert an End-Of-File (EOF)
+// The code annotation { $1 } specifies that parsing with this production
+// returns whatever parsing the expression returns: $1 is the result of parsing
+// the first component of the production (i.e. cExpression)
+
+cExpression:
+  | SKIP                               { Skip }
+
+gcExpression:
+  | bExpression EVAL cExpression       { Eval($1,$3) }
+
+bExpression:
+  | TRUE                               { Bool(true) }
+  | FALSE                              { Bool(false) }
+
+aExpression:
+  | LPAR aExpression RPAR              { $2 }
+  | VAR                                { Var($1) }
+  | NUM                                { Num($1) }
+  | aExpression MULT aExpression       { Mult($1,$3) }
+  | aExpression DIV aExpression        { Div($1,$3) }
+  | aExpression PLUS aExpression       { Plus($1,$3) }
+  | aExpression MINUS aExpression      { Minus($1,$3) }
+  | aExpression POW aExpression        { Pow($1,$3) }
+  | PLUS aExpression       %prec UNARY { UPlus($2) }
+  | MINUS aExpression      %prec UNARY { UMinus($2) }
+
+
+// Again, the code annotation specifies the result of parsing
+// For example { TimesExpr($1,$3) } specifies that parsing with the production
+// returns the value TimesExpr($1,$3), where $i is the result of parsing
+// component i in the production (in this case the lhs and rhs operands)
+
+%%

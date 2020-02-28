@@ -1,0 +1,48 @@
+﻿// The generated lexer module will start with this code
+{
+module Lexer
+
+open GCLSettings
+open System
+open System.Text
+open FSharp.Text.Lexing
+open Parser // open the module that defines the tokens
+
+let sbLog = StringBuilder()
+
+let log (lexeme : char array) (token : String) =
+  (token + ":").PadRight(15) |> sbLog.Append |> ignore
+  new string (lexeme) |> sbLog.AppendLine |> ignore
+
+let logS (s : String) (token : String) =
+  (token + ":").PadRight(15) |> sbLog.Append |> ignore
+  sbLog.AppendLine(s) |> ignore
+}
+
+// Macros for regular expressions we'll use later
+let digit		= ['0'-'9']
+let num			= digit+
+let var			= ['a'-'z' 'A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let whitespace	= [' ' '\u00A0' '\u000C' '\t' '\u2B7F']
+let newline		= "\n\r" | "\r\n" | '\n' | '\r'
+
+// Rules for recognising and building tokens, we need a rule for every token of our language.
+rule tokenize = parse
+// Tokens that need to be ignored (skip them)
+| whitespace    { tokenize lexbuf }
+| newline       { (if DEBUG then logS "\\n" "NEWLINE");          lexbuf.EndPos <- lexbuf.EndPos.NextLine; tokenize lexbuf }
+// Tokens that need to be built
+| num           { (if DEBUG then log lexbuf.Lexeme "NUM");        NUM((int) (LexBuffer<_>.LexemeString lexbuf)) }
+| '*'           { (if DEBUG then log lexbuf.Lexeme "MULT");       MULT }
+| '/'           { (if DEBUG then log lexbuf.Lexeme "DIV");        DIV }
+| '+'           { (if DEBUG then log lexbuf.Lexeme "PLUS");       PLUS }
+| '-'			{ (if DEBUG then log lexbuf.Lexeme "MINUS");      MINUS }
+| '^'           { (if DEBUG then log lexbuf.Lexeme "POW");        POW }
+| "true"        { (if DEBUG then log lexbuf.Lexeme "TRUE");       TRUE }
+| "false"		{ (if DEBUG then log lexbuf.Lexeme "FALSE");      FALSE }
+| "skip"		{ (if DEBUG then log lexbuf.Lexeme "SKIP");       SKIP }
+| "->"          { (if DEBUG then log lexbuf.Lexeme "EVAL");       EVAL }
+| '('           { (if DEBUG then log lexbuf.Lexeme "LPAR");       LPAR }
+| ')'           { (if DEBUG then log lexbuf.Lexeme "RPAR");       RPAR }
+| eof           { (if DEBUG then logS "EOF" "EOF");               EOF }
+| var           { (if DEBUG then log lexbuf.Lexeme "VAR");        VAR(System.String.Concat((LexBuffer<_>.LexemeString lexbuf))) }
